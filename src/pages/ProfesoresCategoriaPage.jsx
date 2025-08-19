@@ -62,12 +62,10 @@ export default function ProfesoresCategoriaPage() {
     }
 
     try {
-      await axios.post(`${config.API.CATEGORIAS}/asignar-profesor`, null, {
-        params: { 
-            profesorId: profesorSeleccionado, 
-            categoriaId: id 
-            }
-        });
+      await axios.post(`${config.API.CATEGORIAS}/asignar-profesor`, {
+        profesorId: profesorSeleccionado,
+        categoriaId: id
+      });
       toast({
         title: 'Profesor asignado.',
         status: 'success',
