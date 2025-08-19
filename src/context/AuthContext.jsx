@@ -14,21 +14,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('jwtToken');
-      const logoutTimestamp = sessionStorage.getItem('logoutTimestamp');
-      
-      // Verificar si hubo un logout reciente (menos de 5 minutos)
-      if (logoutTimestamp) {
-        const timeDiff = Date.now() - parseInt(logoutTimestamp);
-        if (timeDiff < 5 * 60 * 1000) {
-          // Limpiar todo y redirigir al login
-          cleanupAuth();
-          setIsLoading(false);
-          return;
-        } else {
-          // Limpiar timestamp de logout expirado
-          sessionStorage.removeItem('logoutTimestamp');
-        }
-      }
       
       if (storedToken) {
         await verifyToken(storedToken);
@@ -50,15 +35,13 @@ export const AuthProvider = ({ children }) => {
       
       setUser(response.data);
       setToken(tokenToVerify);
-      // Establecer flag de sesión activa
-      sessionStorage.setItem('sessionActive', 'true');
+      setIsLoading(false);
       return true;
     } catch (error) {
       console.error('Token verification failed:', error);
       cleanupAuth();
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
   };
 
@@ -71,12 +54,9 @@ export const AuthProvider = ({ children }) => {
       
       const { token: newToken } = response.data;
       localStorage.setItem('jwtToken', newToken);
-      sessionStorage.setItem('sessionActive', 'true');
-      // Limpiar timestamp de logout si existe
-      sessionStorage.removeItem('logoutTimestamp');
       
-      await verifyToken(newToken);
-      return true;
+      const verified = await verifyToken(newToken);
+      return verified;
     } catch (error) {
       console.error('Login error:', error);
       cleanupAuth();
@@ -85,40 +65,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // Guardar timestamp del logout
-    sessionStorage.setItem('logoutTimestamp', Date.now().toString());
     cleanupAuth();
     navigate('/login', { replace: true });
-    
-    // Forzar recarga para limpiar estado de componentes
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
   };
 
   const cleanupAuth = () => {
     localStorage.removeItem('jwtToken');
-    sessionStorage.removeItem('sessionActive');
     setUser(null);
     setToken(null);
   };
 
   const isAuthenticated = () => {
-    // Verificar múltiples condiciones para mayor seguridad
-    const hasValidToken = !!token;
-    const hasSessionActive = sessionStorage.getItem('sessionActive') === 'true';
-    const hasLocalToken = !!localStorage.getItem('jwtToken');
-    const hasRecentLogout = sessionStorage.getItem('logoutTimestamp');
-    
-    // Si hay logout reciente, no está autenticado
-    if (hasRecentLogout) {
-      const timeDiff = Date.now() - parseInt(hasRecentLogout);
-      if (timeDiff < 5 * 60 * 1000) {
-        return false;
-      }
-    }
-    
-    return hasValidToken && hasSessionActive && hasLocalToken;
+    return !!token;
   };
 
   const isAdmin = () => {
