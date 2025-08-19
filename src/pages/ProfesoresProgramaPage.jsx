@@ -60,16 +60,21 @@ export default function ProfesoresProgramaPage() {
                 
                 // Obtener profesores del programa
                 const profesoresRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}/profesores`);
-                setProfesores(profesoresRes.data);
+                // Asegurarnos de que siempre sea un array
+                setProfesores(Array.isArray(profesoresRes.data) ? profesoresRes.data : []);
                 
                 // Obtener todos los profesores disponibles
-                const todosProfesoresRes = await axios.get(`${config.API.PROFESORES}`); // Ajusta esta ruta según tu API
-                setTodosProfesores(todosProfesoresRes.data);
+                const todosProfesoresRes = await axios.get(`${config.API.PROFESORES}`);
+                // Asegurarnos de que siempre sea un array
+                setTodosProfesores(Array.isArray(todosProfesoresRes.data) ? todosProfesoresRes.data : []);
                 
                 setError(null);
             } catch (err) {
                 setError('No se pudieron cargar los datos del programa educativo.');
-                console.error(err);
+                console.error('Error fetching data:', err);
+                // Asegurar que sean arrays incluso en caso de error
+                setProfesores([]);
+                setTodosProfesores([]);
             } finally {
                 setLoading(false);
             }
@@ -98,12 +103,16 @@ export default function ProfesoresProgramaPage() {
             // Obtener datos completos del profesor seleccionado
             const profesor = todosProfesores.find(p => p.id === parseInt(profesorSeleccionado));
             
+            if (!profesor) {
+                throw new Error("Profesor no encontrado");
+            }
+            
             // Realizar la asignación
             await axios.put(`${config.API.PROGRAMA_EDUCATIVO}/asignar-profesor/${id}`, profesor);
             
             // Actualizar la lista de profesores
             const profesoresRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}/profesores`);
-            setProfesores(profesoresRes.data);
+            setProfesores(Array.isArray(profesoresRes.data) ? profesoresRes.data : []);
             
             // Cerrar modal y resetear selección
             onClose();
@@ -116,10 +125,10 @@ export default function ProfesoresProgramaPage() {
                 isClosable: true,
             });
         } catch (err) {
-            console.error(err);
+            console.error('Error asignando profesor:', err);
             toast({
                 title: "Error al asignar profesor",
-                description: err.response?.data?.mensaje || "Inténtalo de nuevo más tarde",
+                description: err.response?.data?.mensaje || err.message || "Inténtalo de nuevo más tarde",
                 status: "error",
                 duration: 5000,
                 isClosable: true,
@@ -130,9 +139,12 @@ export default function ProfesoresProgramaPage() {
     };
 
     // Filtrar profesores que aún no están asignados a este programa
-    const profesoresDisponibles = todosProfesores.filter(
-        profesor => !profesores.some(p => p.id === profesor.id)
-    );
+    // Asegurarnos de que ambos sean arrays antes de usar filter
+    const profesoresDisponibles = Array.isArray(todosProfesores) && Array.isArray(profesores) 
+        ? todosProfesores.filter(
+            profesor => !profesores.some(p => p.id === profesor.id)
+          )
+        : [];
 
     if (loading) {
         return (
