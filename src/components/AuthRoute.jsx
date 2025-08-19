@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Box, Spinner, Center, Text } from '@chakra-ui/react';
@@ -6,32 +5,6 @@ import { Box, Spinner, Center, Text } from '@chakra-ui/react';
 const AuthRoute = ({ children, requireAdmin = false }) => {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const location = useLocation();
-
-  // Efecto para verificación adicional contra el back-end en rutas protegidas
-  useEffect(() => {
-    const verifyOnProtectedRoutes = async () => {
-      if (isAuthenticated() && !isLoading) {
-        const token = localStorage.getItem('jwtToken');
-        if (token) {
-          try {
-            // Verificación silenciosa con el backend
-            await axios.get(`${config.API.VALIDATE}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-          } catch (error) {
-            // Si falla, limpiar autenticación
-            localStorage.removeItem('jwtToken');
-            sessionStorage.removeItem('sessionActive');
-            window.location.reload();
-          }
-        }
-      }
-    };
-
-    if (location.pathname !== '/login') {
-      verifyOnProtectedRoutes();
-    }
-  }, [location, isAuthenticated, isLoading]);
 
   if (isLoading) {
     return (
