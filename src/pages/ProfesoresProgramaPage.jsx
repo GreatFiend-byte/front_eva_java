@@ -19,8 +19,6 @@ import {
     useToast,
     Avatar,
     Select,
-    FormControl,
-    FormLabel,
     Modal,
     ModalOverlay,
     ModalContent,
@@ -49,51 +47,47 @@ export default function ProfesoresProgramaPage() {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const toast = useToast();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                
-                // Obtener información del programa
-                const programaRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}`);
-                setPrograma(programaRes.data);
-                
-                // Obtener profesores del programa
-                const profesoresRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}/profesores`);
-                // Asegurarnos de que siempre sea un array
-                setProfesores(Array.isArray(profesoresRes.data) ? profesoresRes.data : []);
-                
-                // Obtener todos los profesores disponibles
-                // NOTA: Ajusta esta URL según tu endpoint real
-                const todosProfesoresRes = await axios.get(`${config.API.BASE}/profesores`);
-                console.log('Todos los profesores:', todosProfesoresRes.data);
-                // Asegurarnos de que siempre sea un array
-                setTodosProfesores(Array.isArray(todosProfesoresRes.data) ? todosProfesoresRes.data : []);
-                
-                setError(null);
-            } catch (err) {
-                console.error('Error cargando datos:', err);
-                setError('No se pudieron cargar los datos del programa educativo.');
-                // Asegurar que sean arrays incluso en caso de error
-                setProfesores([]);
-                setTodosProfesores([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const cargarDatos = async () => {
+        try {
+            setLoading(true);
+            
+            // Obtener información del programa
+            const programaRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}`);
+            setPrograma(programaRes.data);
+            
+            // Obtener profesores del programa
+            const profesoresRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}/profesores`);
+            setProfesores(Array.isArray(profesoresRes.data) ? profesoresRes.data : []);
+            
+            // Obtener todos los profesores disponibles
+            const todosProfesoresRes = await axios.get(`${config.API.PROFESORES}?soloactivo=false`);
+            setTodosProfesores(Array.isArray(todosProfesoresRes.data) ? todosProfesoresRes.data : []);
+            
+            setError(null);
+        } catch (err) {
+            console.error('Error cargando datos:', err);
+            setError('No se pudieron cargar los datos del programa educativo.');
+            setProfesores([]);
+            setTodosProfesores([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        fetchData();
+    useEffect(() => {
+        cargarDatos();
     }, [id]);
 
     const handleBack = () => {
         navigate(-1);
     };
 
-    const handleAsignarProfesor = async () => {
+    const asignarProfesor = async () => {
         if (!profesorSeleccionado) {
             toast({
-                title: "Selecciona un profesor",
-                status: "warning",
+                title: 'Error',
+                description: 'Debes seleccionar un profesor',
+                status: 'warning',
                 duration: 3000,
                 isClosable: true,
             });
@@ -102,36 +96,32 @@ export default function ProfesoresProgramaPage() {
 
         setAsignando(true);
         try {
-            // Obtener datos completos del profesor seleccionado
+            // Obtener el profesor completo seleccionado
             const profesor = todosProfesores.find(p => p.id === parseInt(profesorSeleccionado));
             
             if (!profesor) {
                 throw new Error("Profesor no encontrado");
             }
-            
-            // Realizar la asignación
+
+            // Usar el endpoint PUT para asignar el profesor
             await axios.put(`${config.API.PROGRAMA_EDUCATIVO}/asignar-profesor/${id}`, profesor);
             
-            // Actualizar la lista de profesores
-            const profesoresRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}/profesores`);
-            setProfesores(Array.isArray(profesoresRes.data) ? profesoresRes.data : []);
-            
-            // Cerrar modal y resetear selección
-            onClose();
-            setProfesorSeleccionado('');
-            
             toast({
-                title: "Profesor asignado correctamente",
-                status: "success",
+                title: 'Profesor asignado correctamente',
+                status: 'success',
                 duration: 3000,
                 isClosable: true,
             });
+            
+            // Recargar los datos
+            cargarDatos();
+            setProfesorSeleccionado('');
         } catch (err) {
             console.error('Error asignando profesor:', err);
             toast({
-                title: "Error al asignar profesor",
-                description: err.response?.data?.mensaje || err.message || "Inténtalo de nuevo más tarde",
-                status: "error",
+                title: 'Error al asignar profesor',
+                description: err.response?.data?.mensaje || err.message || 'Inténtalo de nuevo más tarde',
+                status: 'error',
                 duration: 5000,
                 isClosable: true,
             });
@@ -140,17 +130,10 @@ export default function ProfesoresProgramaPage() {
         }
     };
 
-    // Filtrar profesores que aún no están asignados a este programa
-    // Asegurarnos de que ambos sean arrays antes de usar filter
-    const profesoresDisponibles = Array.isArray(todosProfesores) && Array.isArray(profesores) 
-        ? todosProfesores.filter(
-            profesor => !profesores.some(p => p.id === profesor.id)
-          )
-        : [];
-
-    console.log('Profesores disponibles:', profesoresDisponibles);
-    console.log('Todos profesores:', todosProfesores);
-    console.log('Profesores asignados:', profesores);
+    // Filtrar profesores que no están asignados a este programa
+    const profesoresDisponibles = todosProfesores.filter(
+        profesor => !profesores.some(p => p.id === profesor.id)
+    );
 
     if (loading) {
         return (
@@ -188,6 +171,40 @@ export default function ProfesoresProgramaPage() {
                 <Box w="100px" /> {/* Espacio para alinear */}
             </Flex>
 
+            {/* Sección para asignar nuevo profesor */}
+            <Box bg="white" p={6} borderRadius="xl" boxShadow="lg" mb={6}>
+                <Text fontSize="lg" fontWeight="bold" mb={4}>Asignar nuevo profesor</Text>
+                <Flex gap={4} alignItems="flex-end">
+                    <Select
+                        placeholder={profesoresDisponibles.length === 0 ? "No hay profesores disponibles" : "Selecciona un profesor"}
+                        value={profesorSeleccionado}
+                        onChange={(e) => setProfesorSeleccionado(e.target.value)}
+                        flex="1"
+                        isDisabled={profesoresDisponibles.length === 0}
+                    >
+                        {profesoresDisponibles.map(profesor => (
+                            <option key={profesor.id} value={profesor.id}>
+                                {profesor.nombre} {profesor.apellidos} - {profesor.clavepe}
+                            </option>
+                        ))}
+                    </Select>
+                    <Button 
+                        colorScheme="teal" 
+                        onClick={asignarProfesor}
+                        isLoading={asignando}
+                        isDisabled={!profesorSeleccionado || profesoresDisponibles.length === 0}
+                        leftIcon={<AddIcon />}
+                    >
+                        Asignar Profesor
+                    </Button>
+                </Flex>
+                {profesoresDisponibles.length === 0 && (
+                    <Text color="gray.500" fontSize="sm" mt={2}>
+                        Todos los profesores ya están asignados a este programa.
+                    </Text>
+                )}
+            </Box>
+
             <Box bg="white" p={6} borderRadius="xl" boxShadow="lg">
                 <Flex mb={6} justifyContent="space-between" alignItems="center">
                     <Stack direction="row" spacing={4} align="center">
@@ -200,19 +217,9 @@ export default function ProfesoresProgramaPage() {
                         </Badge>
                     </Stack>
                     
-                    <Flex alignItems="center">
-                        <Text fontSize="sm" color="gray.500" mr={4}>
-                            Total de profesores: {profesores.length}
-                        </Text>
-                        <Button 
-                            colorScheme="teal" 
-                            leftIcon={<AddIcon />} 
-                            onClick={onOpen}
-                            isDisabled={profesoresDisponibles.length === 0}
-                        >
-                            Asignar Profesor
-                        </Button>
-                    </Flex>
+                    <Text fontSize="sm" color="gray.500">
+                        Total de profesores: {profesores.length}
+                    </Text>
                 </Flex>
 
                 {profesores.length > 0 ? (
@@ -261,50 +268,6 @@ export default function ProfesoresProgramaPage() {
                     </Box>
                 )}
             </Box>
-
-            {/* Modal para asignar profesor */}
-            <Modal isOpen={isOpen} onClose={onClose}>
-                <ModalOverlay />
-                <ModalContent>
-                    <ModalHeader>Asignar Profesor al Programa</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody pb={6}>
-                        <FormControl>
-                            <FormLabel>Selecciona un profesor</FormLabel>
-                            <Select
-                                placeholder={profesoresDisponibles.length === 0 ? "No hay profesores disponibles" : "Selecciona un profesor"}
-                                value={profesorSeleccionado}
-                                onChange={(e) => setProfesorSeleccionado(e.target.value)}
-                                isDisabled={profesoresDisponibles.length === 0}
-                            >
-                                {profesoresDisponibles.map((profesor) => (
-                                    <option key={profesor.id} value={profesor.id}>
-                                        {profesor.nombre} {profesor.apellidos} - {profesor.clavepe}
-                                    </option>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        {profesoresDisponibles.length === 0 && (
-                            <Text color="gray.500" fontSize="sm" mt={2}>
-                                Todos los profesores ya están asignados a este programa.
-                            </Text>
-                        )}
-                    </ModalBody>
-
-                    <ModalFooter>
-                        <Button 
-                            colorScheme="teal" 
-                            mr={3} 
-                            onClick={handleAsignarProfesor}
-                            isLoading={asignando}
-                            isDisabled={!profesorSeleccionado || profesoresDisponibles.length === 0}
-                        >
-                            Asignar
-                        </Button>
-                        <Button onClick={onClose} isDisabled={asignando}>Cancelar</Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
         </Box>
     );
 }
