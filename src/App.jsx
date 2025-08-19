@@ -1,11 +1,11 @@
 import { Box, Flex } from '@chakra-ui/react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import DivisionsPage from './pages/DivisionsPage';
 import ProgramasDeDivisionPage from './pages/ProgramasDeDivisionPage';
 import ProfesoresProgramaPage from './pages/ProfesoresProgramaPage';
-import ProfesoresPage from './pages/ProfesoresPage'; // Nueva importación
+import ProfesoresPage from './pages/ProfesoresPage';
 import LoginPage from './pages/LoginPage';
 import AuthRoute from './components/AuthRoute';
 import CategoriasPage from './pages/CategoriasPage';
@@ -32,7 +32,12 @@ const AppContent = () => {
       <Flex>
         <Box flex="1" ml={isAuthenticated() ? "20px" : "0"} p={8}>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route 
+              path="/login" 
+              element={
+                isAuthenticated() ? <Navigate to="/divisiones" replace /> : <LoginPage />
+              } 
+            />
             <Route
               path="/divisiones"
               element={
@@ -97,7 +102,12 @@ const AppContent = () => {
                 </AuthRoute>
               }
             />
-            <Route path="*" element={<LoginPage />} />
+            <Route 
+              path="*" 
+              element={
+                isAuthenticated() ? <Navigate to="/divisiones" replace /> : <Navigate to="/login" replace />
+              } 
+            />
           </Routes>
         </Box>
       </Flex>
