@@ -58,8 +58,6 @@ export default function ProfesoresProgramaPage() {
         } catch (err) {
             console.error('Error cargando datos:', err);
             setError('No se pudieron cargar los datos del programa educativo.');
-            setProfesores([]);
-            setTodosProfesores([]);
         } finally {
             setLoading(false);
         }
