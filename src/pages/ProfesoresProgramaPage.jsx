@@ -19,14 +19,6 @@ import {
     useToast,
     Avatar,
     Select,
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalFooter,
-    ModalBody,
-    ModalCloseButton,
-    useDisclosure
 } from '@chakra-ui/react';
 import { ArrowBackIcon, AddIcon } from '@chakra-ui/icons';
 import { useEffect, useState } from 'react';
@@ -44,7 +36,6 @@ export default function ProfesoresProgramaPage() {
     const [todosProfesores, setTodosProfesores] = useState([]);
     const [profesorSeleccionado, setProfesorSeleccionado] = useState('');
     const [asignando, setAsignando] = useState(false);
-    const { isOpen, onOpen, onClose } = useDisclosure();
     const toast = useToast();
 
     const cargarDatos = async () => {
@@ -57,11 +48,11 @@ export default function ProfesoresProgramaPage() {
             
             // Obtener profesores del programa
             const profesoresRes = await axios.get(`${config.API.PROGRAMA_EDUCATIVO}/${id}/profesores`);
-            setProfesores(Array.isArray(profesoresRes.data) ? profesoresRes.data : []);
+            setProfesores(profesoresRes.data);
             
-            // Obtener todos los profesores disponibles
-            const todosProfesoresRes = await axios.get(`${config.API.PROFESORES}?soloactivo=false`);
-            setTodosProfesores(Array.isArray(todosProfesoresRes.data) ? todosProfesoresRes.data : []);
+            // Obtener todos los profesores disponibles del microservicio
+            const profResponse = await axios.get(`${config.API.PROFESOR}?soloactivo=false`);
+            setTodosProfesores(profResponse.data);
             
             setError(null);
         } catch (err) {
@@ -176,11 +167,10 @@ export default function ProfesoresProgramaPage() {
                 <Text fontSize="lg" fontWeight="bold" mb={4}>Asignar nuevo profesor</Text>
                 <Flex gap={4} alignItems="flex-end">
                     <Select
-                        placeholder={profesoresDisponibles.length === 0 ? "No hay profesores disponibles" : "Selecciona un profesor"}
+                        placeholder="Selecciona un profesor"
                         value={profesorSeleccionado}
                         onChange={(e) => setProfesorSeleccionado(e.target.value)}
                         flex="1"
-                        isDisabled={profesoresDisponibles.length === 0}
                     >
                         {profesoresDisponibles.map(profesor => (
                             <option key={profesor.id} value={profesor.id}>
@@ -192,7 +182,7 @@ export default function ProfesoresProgramaPage() {
                         colorScheme="teal" 
                         onClick={asignarProfesor}
                         isLoading={asignando}
-                        isDisabled={!profesorSeleccionado || profesoresDisponibles.length === 0}
+                        isDisabled={!profesorSeleccionado}
                         leftIcon={<AddIcon />}
                     >
                         Asignar Profesor
@@ -200,7 +190,7 @@ export default function ProfesoresProgramaPage() {
                 </Flex>
                 {profesoresDisponibles.length === 0 && (
                     <Text color="gray.500" fontSize="sm" mt={2}>
-                        Todos los profesores ya están asignados a este programa.
+                        No hay profesores disponibles para asignar.
                     </Text>
                 )}
             </Box>
