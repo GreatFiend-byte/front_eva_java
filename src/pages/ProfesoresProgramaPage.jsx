@@ -64,14 +64,16 @@ export default function ProfesoresProgramaPage() {
                 setProfesores(Array.isArray(profesoresRes.data) ? profesoresRes.data : []);
                 
                 // Obtener todos los profesores disponibles
-                const todosProfesoresRes = await axios.get(`${config.API.PROFESORES}`);
+                // NOTA: Ajusta esta URL según tu endpoint real
+                const todosProfesoresRes = await axios.get(`${config.API.BASE}/profesores`);
+                console.log('Todos los profesores:', todosProfesoresRes.data);
                 // Asegurarnos de que siempre sea un array
                 setTodosProfesores(Array.isArray(todosProfesoresRes.data) ? todosProfesoresRes.data : []);
                 
                 setError(null);
             } catch (err) {
+                console.error('Error cargando datos:', err);
                 setError('No se pudieron cargar los datos del programa educativo.');
-                console.error('Error fetching data:', err);
                 // Asegurar que sean arrays incluso en caso de error
                 setProfesores([]);
                 setTodosProfesores([]);
@@ -146,6 +148,10 @@ export default function ProfesoresProgramaPage() {
           )
         : [];
 
+    console.log('Profesores disponibles:', profesoresDisponibles);
+    console.log('Todos profesores:', todosProfesores);
+    console.log('Profesores asignados:', profesores);
+
     if (loading) {
         return (
             <Flex justify="center" align="center" minH="100vh">
@@ -217,7 +223,6 @@ export default function ProfesoresProgramaPage() {
                                     <Th>ID</Th>
                                     <Th>Nombre</Th>
                                     <Th>Clave PE</Th>
-                                    <Th>Género</Th>
                                     <Th>Estado</Th>
                                 </Tr>
                             </Thead>
@@ -230,7 +235,7 @@ export default function ProfesoresProgramaPage() {
                                                 <Avatar 
                                                     name={`${profesor.nombre} ${profesor.apellidos}`} 
                                                     size="sm" 
-                                                    bg={profesor.genero === 'F' ? 'pink.500' : 'teal.500'}
+                                                    bg="teal.500"
                                                 />
                                                 <Text>
                                                     {profesor.nombre} {profesor.apellidos}
@@ -238,7 +243,6 @@ export default function ProfesoresProgramaPage() {
                                             </Stack>
                                         </Td>
                                         <Td>{profesor.clavepe}</Td>
-                                        <Td>{profesor.genero === 'M' ? 'Masculino' : 'Femenino'}</Td>
                                         <Td>
                                             <Badge colorScheme={profesor.activo ? 'green' : 'red'}>
                                                 {profesor.activo ? 'Activo' : 'Inactivo'}
@@ -268,9 +272,10 @@ export default function ProfesoresProgramaPage() {
                         <FormControl>
                             <FormLabel>Selecciona un profesor</FormLabel>
                             <Select
-                                placeholder="Selecciona un profesor"
+                                placeholder={profesoresDisponibles.length === 0 ? "No hay profesores disponibles" : "Selecciona un profesor"}
                                 value={profesorSeleccionado}
                                 onChange={(e) => setProfesorSeleccionado(e.target.value)}
+                                isDisabled={profesoresDisponibles.length === 0}
                             >
                                 {profesoresDisponibles.map((profesor) => (
                                     <option key={profesor.id} value={profesor.id}>
@@ -279,6 +284,11 @@ export default function ProfesoresProgramaPage() {
                                 ))}
                             </Select>
                         </FormControl>
+                        {profesoresDisponibles.length === 0 && (
+                            <Text color="gray.500" fontSize="sm" mt={2}>
+                                Todos los profesores ya están asignados a este programa.
+                            </Text>
+                        )}
                     </ModalBody>
 
                     <ModalFooter>
@@ -287,7 +297,7 @@ export default function ProfesoresProgramaPage() {
                             mr={3} 
                             onClick={handleAsignarProfesor}
                             isLoading={asignando}
-                            isDisabled={!profesorSeleccionado}
+                            isDisabled={!profesorSeleccionado || profesoresDisponibles.length === 0}
                         >
                             Asignar
                         </Button>
